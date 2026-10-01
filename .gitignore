@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+
+# Local lakehouse (generated data; can be several GB)
+lakehouse/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Raw API caches (the tidy outputs in data/reference/ ARE committed)
+data/reference/edgar_facts/
+data/reference/wiki_cache/
+
+# Spark / Delta jars cached for Windows local mode
+.jars/
+
+# Databricks bundle state
+.databricks/
+
+# Scratch space
+.scratch/
+
+# Secrets
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,193 @@
+# Real-world reference data an alt-data analyst curates. Nothing in this file is synthetic.
+#
+# companies[].brands[] feed two things:
+#   * entity resolution: `aliases` are the canonical strings we match noisy card descriptors against,
+#     `mcc` lists merchant category codes the brand legitimately transacts under;
+#   * the effective-dated brand -> ticker ownership table (`valid_from` / `valid_to`), so spend at an
+#     acquired chain only counts toward the parent after the deal closes.
+#     The Habit -> YUM, 2020-03-18: https://investors.yum.com/news-events/financial-releases/news-details/2020/Yum-Brands-Completes-Acquisition-of-The-Habit-Restaurants-Inc/default.aspx
+#     Ruth's Chris -> DRI, 2023-06-14: https://investor.darden.com/news/news-details/2023/Darden-Restaurants-Completes-Acquisition-of-Ruths-Hospitality-Group/default.aspx
+#     Chuy's -> DRI, 2024-10-11: https://investor.darden.com/news/news-details/2024/Darden-Restaurants-Completes-Acquisition-of-Chuys-Holdings-Inc/default.aspx
+#
+# `wiki` lists English Wikipedia articles used by the pageview alt-data asset (redirects are resolved at fetch time).
+
+revenue_concepts:   # XBRL concepts tried in priority order when building quarterly revenue
+  - Revenues
+  - RevenueFromContractWithCustomerExcludingAssessedTax
+  - RevenueFromContractWithCustomerIncludingAssessedTax
+  - SalesRevenueNet
+  - SalesRevenueGoodsNet
+
+companies:
+  - ticker: SBUX
+    cik: 829224
+    name: Starbucks
+    sector: Restaurants
+    wiki: [Starbucks]
+    brands:
+      - {brand: STARBUCKS, aliases: [STARBUCKS, STARBUCKS COFFEE, STARBUCKS CARD], mcc: [5814, 5812, 5499]}
+
+  - ticker: CMG
+    cik: 1058090
+    name: Chipotle Mexican Grill
+    sector: Restaurants
+    wiki: [Chipotle Mexican Grill]
+    brands:
+      - {brand: CHIPOTLE, aliases: [CHIPOTLE, CHIPOTLE MEXICAN GRILL], mcc: [5814, 5812]}
+
+  - ticker: MCD
+    cik: 63908
+    name: McDonald's
+    sector: Restaurants
+    wiki: ["McDonald's"]
+    brands:
+      - {brand: MCDONALDS, aliases: [MCDONALDS, "MCDONALD'S"], mcc: [5814, 5812]}
+
+  - ticker: YUM
+    cik: 1041061
+    name: Yum! Brands
+    sector: Restaurants
+    wiki: [Taco Bell, KFC, Pizza Hut]
+    brands:
+      - {brand: TACO BELL, aliases: [TACO BELL], mcc: [5814, 5812]}
+      - {brand: KFC, aliases: [KFC, KENTUCKY FRIED CHICKEN], mcc: [5814, 5812]}
+      - {brand: PIZZA HUT, aliases: [PIZZA HUT], mcc: [5814, 5812]}
+      - {brand: THE HABIT, aliases: [HABIT BURGER, HABIT BURGER GRILL, THE HABIT RESTAURANT], mcc: [5814, 5812], valid_from: 2020-03-18}
+
+  - ticker: DPZ
+    cik: 1286681
+    name: Domino's Pizza
+    sector: Restaurants
+    wiki: ["Domino's", "Domino's Pizza"]     # renamed early 2023
+    brands:
+      - {brand: DOMINOS, aliases: [DOMINOS, "DOMINO'S", DOMINOS PIZZA], mcc: [5814, 5812]}
+
+  - ticker: DRI
+    cik: 940944
+    name: Darden Restaurants
+    sector: Restaurants
+    wiki: [Olive Garden, LongHorn Steakhouse, Darden Restaurants]
+    brands:
+      - {brand: OLIVE GARDEN, aliases: [OLIVE GARDEN], mcc: [5812, 5813]}
+      - {brand: LONGHORN STEAKHOUSE, aliases: [LONGHORN STEAKHOUSE, LONGHORN STEAK], mcc: [5812, 5813]}
+      - {brand: CHEDDARS, aliases: ["CHEDDAR'S SCRATCH KITCHEN", CHEDDARS], mcc: [5812, 5813]}
+      - {brand: YARD HOUSE, aliases: [YARD HOUSE], mcc: [5812, 5813]}
+      - {brand: RUTHS CHRIS, aliases: [RUTHS CHRIS, "RUTH'S CHRIS STEAK HOUSE"], mcc: [5812, 5813], valid_from: 2023-06-14}
+      - {brand: CHUYS, aliases: [CHUYS, "CHUY'S"], mcc: [5812, 5813], valid_from: 2024-10-11}
+
+  - ticker: WMT
+    cik: 104169
+    name: Walmart
+    sector: Retail
+    wiki: [Walmart]
+    brands:
+      - {brand: WALMART, aliases: [WALMART, WAL-MART, WM SUPERCENTER, WALMART.COM], mcc: [5310, 5311, 5411, 5541, 5542, 5912]}
+      - {brand: SAMS CLUB, aliases: [SAMS CLUB, "SAM'S CLUB", SAMSCLUB.COM], mcc: [5300, 5541, 5542, 5411]}
+
+  - ticker: TGT
+    cik: 27419
+    name: Target
+    sector: Retail
+    wiki: [Target Corporation]
+    brands:
+      - {brand: TARGET, aliases: [TARGET, TARGET.COM], mcc: [5310, 5311, 5411]}
+
+  - ticker: COST
+    cik: 909832
+    name: Costco
+    sector: Retail
+    wiki: [Costco]
+    brands:
+      - {brand: COSTCO, aliases: [COSTCO, COSTCO WHOLESALE, COSTCO WHSE, COSTCO GAS, COSTCO.COM], mcc: [5300, 5541, 5542, 5411]}
+
+  - ticker: HD
+    cik: 354950
+    name: Home Depot
+    sector: Retail
+    wiki: [The Home Depot]
+    brands:
+      - {brand: HOME DEPOT, aliases: [THE HOME DEPOT, HOME DEPOT, HOMEDEPOT.COM], mcc: [5200, 5211]}
+
+  - ticker: LOW
+    cik: 60667
+    name: Lowe's
+    sector: Retail
+    wiki: ["Lowe's"]
+    brands:
+      - {brand: LOWES, aliases: [LOWES, "LOWE'S", LOWES.COM], mcc: [5200, 5211, 5251]}
+
+  - ticker: DG
+    cik: 29534
+    name: Dollar General
+    sector: Retail
+    wiki: [Dollar General]
+    brands:
+      - {brand: DOLLAR GENERAL, aliases: [DOLLAR GENERAL, DOLLARGENERAL.COM], mcc: [5331, 5310, 5411, 5399]}
+
+  - ticker: TJX
+    cik: 109198
+    name: TJX Companies
+    sector: Retail
+    wiki: [TJ Maxx, T.J. Maxx, Marshalls, HomeGoods]     # "T.J. Maxx" until late 2017
+    brands:
+      - {brand: TJ MAXX, aliases: [TJ MAXX, T.J. MAXX, TJMAXX], mcc: [5651, 5311, 5699]}
+      - {brand: MARSHALLS, aliases: [MARSHALLS], mcc: [5651, 5311, 5699]}
+      - {brand: HOMEGOODS, aliases: [HOMEGOODS, HOME GOODS], mcc: [5719, 5311]}
+      - {brand: SIERRA, aliases: [SIERRA TRADING POST, SIERRA], mcc: [5941, 5651, 5699]}
+
+  - ticker: ULTA
+    cik: 1403568
+    name: Ulta Beauty
+    sector: Retail
+    wiki: [Ulta Beauty]
+    brands:
+      - {brand: ULTA BEAUTY, aliases: [ULTA BEAUTY, ULTA, ULTA.COM], mcc: [5977, 5999]}
+
+  - ticker: BBY
+    cik: 764478
+    name: Best Buy
+    sector: Retail
+    wiki: [Best Buy]
+    brands:
+      - {brand: BEST BUY, aliases: [BEST BUY, BESTBUY.COM], mcc: [5732, 5734, 5999]}
+
+  - ticker: NFLX
+    cik: 1065280
+    name: Netflix
+    sector: Internet
+    wiki: [Netflix]
+    brands:
+      - {brand: NETFLIX, aliases: [NETFLIX, NETFLIX.COM], mcc: [4899, 5815, 5968]}
+
+  - ticker: CHWY
+    cik: 1766502
+    name: Chewy
+    sector: Internet
+    wiki: [Chewy (company)]
+    brands:
+      - {brand: CHEWY, aliases: [CHEWY, CHEWY.COM], mcc: [5995, 5964, 5969]}
+
+  - ticker: UBER
+    cik: 1543151
+    name: Uber
+    sector: Internet
+    wiki: [Uber, Uber (company)]     # renamed early 2018
+    brands:
+      - {brand: UBER, aliases: [UBER TRIP, UBER EATS, UBER], mcc: [4121, 5812, 5814, 4789]}
+
+  - ticker: DASH
+    cik: 1792789
+    name: DoorDash
+    sector: Internet
+    wiki: [DoorDash]
+    brands:
+      - {brand: DOORDASH, aliases: [DOORDASH, DASHPASS], mcc: [5812, 5814, 5499]}
+
+  - ticker: AMZN
+    cik: 1018724
+    name: Amazon
+    sector: Internet
+    wiki: [Amazon (company), Amazon.com]     # renamed in late 2017; both titles are summed
+    brands:
+      - {brand: AMAZON, aliases: [AMAZON, AMAZON.COM, AMZN MKTP, AMAZON MARKETPLACE, AMAZON PRIME, PRIME VIDEO, AUDIBLE, KINDLE], mcc: [5942, 5964, 5969, 5999, 5815, 5968, 4899, 5411]}
+      - {brand: WHOLE FOODS, aliases: [WHOLE FOODS, WHOLE FOODS MARKET, WHOLEFDS], mcc: [5411]}

@@ -1,0 +1,60 @@
+# PanelCast runtime configuration.
+# Real-world reference data lives in universe.yaml; the synthetic card panel is defined in simulation.yaml.
+
+project:
+  seed: 20261001
+
+storage:
+  local_root: lakehouse            # relative to the project root (gitignored)
+  databricks:
+    catalog: workspace             # Databricks Free Edition's default catalog
+    schema: panelcast
+    volume: landing                # /Volumes/<catalog>/<schema>/<volume> holds vendor files + checkpoints
+
+reference:
+  edgar_revenue: data/reference/edgar_revenue.csv
+  edgar_facts_cache: data/reference/edgar_facts          # raw companyfacts JSON (gitignored, re-downloadable)
+  wiki_pageviews: data/reference/wiki_pageviews.csv.gz
+  history_start: 2016-01-01                              # earliest fiscal period kept from EDGAR
+
+silver:
+  max_abs_amount: 25000            # larger values are quarantined
+  valid_currencies: [USD]
+
+entity_resolution:
+  auto_accept: 0.90                # combined score >= this (and MCC-compatible) -> accept
+  review_floor: 0.72               # scores in [review_floor, auto_accept) go to the review queue
+  top_k_candidates: 5              # TF-IDF blocking: candidates scored per descriptor
+  triage_min_score: 0.40           # unmatched descriptors above this score (top spend first) also get reviewed
+  triage_top_n: 150
+  llm:
+    enabled: auto                  # auto = only when ANTHROPIC_API_KEY is set; true | false to force
+    model: claude-opus-5           # swap for claude-haiku-4-5 to cut cost on large review queues
+    effort: low                    # a classification task; low effort keeps it cheap and fast
+    batch_size: 20                 # descriptors per LLM call
+    max_descriptors: 400           # budget guard per run
+    min_confidence: 0.8
+
+anomaly:
+  baseline_window: 28              # days in the rolling robust baseline
+  z_threshold: 5.0                 # |robust z| above this is anomalous
+  min_run_days: 1                  # consecutive flagged days needed to open an event
+  unit_error_log_ratio: [3.9, 5.3] # log(median ticket ratio) band treated as a cents/dollars mix-up (~e^4.6 = 100x)
+  ticker_min_drop: 0.35            # source/ticker share must fall >= 35% vs. consensus to flag a tagging break
+  ticker_z_threshold: 4.0          # quasi-Poisson z on 7-day counts, required on 7 consecutive days
+
+gold:
+  raking_max_iter: 50
+  raking_tol: 1.0e-8
+
+nowcast:
+  delivery_lag_days: 7             # nowcast is "published" quarter_end + 7 days (late-posting buffer)
+  min_train_quarters: 12           # pooled training rows needed before the first prediction
+  backtest_start: 2020-01-01       # first fiscal quarter end evaluated
+  covid_window: [2020-01-01, 2021-12-31]
+
+agent:
+  model: claude-opus-5
+  effort: medium
+  max_revisions: 2
+  max_tool_rounds: 6
