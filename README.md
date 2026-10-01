@@ -1,5 +1,11 @@
 # PanelCast
 
+[![ci](https://github.com/HermosuraM/panelcast/actions/workflows/ci.yml/badge.svg)](https://github.com/HermosuraM/panelcast/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
+![PySpark 4](https://img.shields.io/badge/PySpark-4.x-E25A1C?logo=apachespark&logoColor=white)
+![Delta Lake](https://img.shields.io/badge/Delta%20Lake-4.x-00ADD4)
+[![License: MIT](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
+
 **Alternative-data revenue nowcasting on a Spark / Delta Lake lakehouse.** Card-panel transactions go in; out come
 merchant entity resolution, data-quality anomaly detection, panel-bias correction, point-in-time revenue nowcasts
 scored against real SEC filings, an evaluation of a second (real) alt-data asset, and a LangGraph agent that writes
@@ -173,3 +179,8 @@ reports/         generated results, figures, research notes
 * The LLM paths are covered by tests with a scripted model; the shipped notes were produced by the deterministic
   template because no API key was used to generate this repo's outputs.
 * The Databricks bundle follows the documented spec but has not been deployed from this repo yet.
+
+## Author
+
+Built by **Matthew Hermosura** (Data Science + Applied Mathematics, UT Dallas) -
+[LinkedIn](https://www.linkedin.com/in/matthew-hermosura) · [GitHub](https://github.com/HermosuraM).

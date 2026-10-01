@@ -27,6 +27,10 @@ dependencies = [
     "langchain-anthropic>=1.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/HermosuraM/panelcast"
+Documentation = "https://github.com/HermosuraM/panelcast/blob/main/docs/METHODOLOGY.md"
+
 [project.optional-dependencies]
 local = ["pyspark>=4.0", "delta-spark>=4.0"]
 dev = ["pytest>=8", "ruff>=0.6"]
