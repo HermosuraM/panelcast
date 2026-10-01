@@ -35,3 +35,6 @@ data/reference/wiki_cache/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local previews
+.preview/
