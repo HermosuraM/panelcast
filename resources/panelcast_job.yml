@@ -1,0 +1,118 @@
+# One task per pipeline stage, so the Databricks job graph mirrors the medallion architecture and any
+# stage can be re-run on its own. All tasks share one serverless environment with the PanelCast wheel.
+resources:
+  jobs:
+    panelcast_pipeline:
+      name: panelcast-pipeline
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: simulate
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "simulate", "--scale", "${var.scale}"]
+        - task_key: reference
+          depends_on:
+            - task_key: simulate
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "reference"]
+        - task_key: bronze
+          depends_on:
+            - task_key: reference
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "bronze"]
+        - task_key: silver
+          depends_on:
+            - task_key: bronze
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "silver"]
+        - task_key: resolve
+          depends_on:
+            - task_key: silver
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "resolve"]
+        - task_key: gold
+          depends_on:
+            - task_key: resolve
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "gold"]
+        - task_key: anomalies
+          depends_on:
+            - task_key: gold
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "anomalies"]
+        - task_key: estimates
+          depends_on:
+            - task_key: anomalies
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "estimates"]
+        - task_key: nowcast
+          depends_on:
+            - task_key: estimates
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "nowcast"]
+        - task_key: assets
+          depends_on:
+            - task_key: estimates
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "assets"]
+        - task_key: evaluate
+          depends_on:
+            - task_key: estimates
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "evaluate"]
+        - task_key: agent
+          depends_on:
+            - task_key: nowcast
+            - task_key: assets
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "agent"]
+        - task_key: report
+          depends_on:
+            - task_key: agent
+            - task_key: evaluate
+          environment_key: default
+          python_wheel_task:
+            package_name: panelcast
+            entry_point: panelcast
+            parameters: ["--root", "${workspace.file_path}", "--env", "databricks", "run", "report"]
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "2"
+            dependencies:
+              - ../dist/*.whl

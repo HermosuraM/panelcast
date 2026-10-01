@@ -1,0 +1,240 @@
+# The synthetic world behind the card panel. Everything here is made up EXCEPT the revenue anchor:
+# each company's daily "card-visible spend" is interpolated from its REAL quarterly revenue (SEC EDGAR),
+# scaled by a slowly drifting visibility ratio (US consumer share, franchise/system sales, take rates...).
+# The pipeline never reads this file; evaluation code compares pipeline output with the ground truth
+# the simulator writes to the `sim_truth` layer.
+
+start_date: 2018-01-01
+end_date: 2026-06-30
+population: 260000000            # adults represented by the "census" margins
+backfill_until: 2026-03-31       # history arrives as monthly backfill files; later days as daily files
+
+panel:
+  n_panelists: 10000             # members ever enrolled (scale knob; ~25M transactions at the default)
+  activity_multiplier: 2.0       # each member stands in for this many people (cuts sampling noise cheaply)
+  mean_tenure_years: 4.0         # individual churn
+  heterogeneity_shape: 0.6       # gamma shape of member-level loyalty (mean 1; smaller = more dispersed)
+
+posting_lag_probs: [0.25, 0.45, 0.20, 0.10]   # P(post_date - txn_date = 0,1,2,3 days)
+refund_rate: 0.012
+
+demographics:
+  age: {labels: ["18-34", "35-54", "55+"], population: [0.30, 0.33, 0.37]}
+  income: {labels: ["<50K", "50-100K", "100K+"], population: [0.38, 0.30, 0.32]}
+  region: {labels: [NE, MW, S, W], population: [0.17, 0.21, 0.38, 0.24]}
+
+# Data contributors (banks / card issuers / fintechs). Each skews demographically and formats descriptors
+# its own way. Composition shifts over time are exactly what panel normalization + raking must undo.
+sources:
+  - {id: SRC_A, share: 0.28, onboard: [2018-01-01, 2018-02-28], trickle: 0.35, format: classic,
+     age: [0.18, 0.37, 0.45], income: [0.22, 0.33, 0.45], region: [0.30, 0.20, 0.25, 0.25]}
+  - {id: SRC_B, share: 0.20, onboard: [2018-01-01, 2018-06-30], trickle: 0.35, format: pos_prefix,
+     age: [0.58, 0.30, 0.12], income: [0.45, 0.35, 0.20], region: [0.15, 0.15, 0.30, 0.40]}
+  - {id: SRC_C, share: 0.17, onboard: [2019-07-01, 2019-12-31], trickle: 0.30, format: titlecase_short,
+     age: [0.25, 0.33, 0.42], income: [0.55, 0.30, 0.15], region: [0.05, 0.10, 0.80, 0.05]}
+  - {id: SRC_D, share: 0.22, onboard: [2021-03-01, 2021-08-31], trickle: 0.25, format: debit_purchase,
+     age: [0.45, 0.40, 0.15], income: [0.30, 0.45, 0.25], region: [0.15, 0.45, 0.25, 0.15]}
+  - {id: SRC_E, share: 0.13, onboard: [2023-01-01, 2023-06-30], trickle: 0.30, format: online_ref,
+     age: [0.20, 0.50, 0.30], income: [0.15, 0.30, 0.55], region: [0.40, 0.10, 0.15, 0.35]}
+
+# Demographic spend multipliers by category: per-capita spend = base(t) * age * income * region,
+# renormalized so the population-weighted mean is 1.
+profiles:
+  coffee:           {age: [1.35, 1.10, 0.65], income: [0.70, 1.00, 1.30], region: [1.00, 0.85, 0.90, 1.30]}
+  fast_casual:      {age: [1.50, 1.05, 0.55], income: [0.80, 1.05, 1.15], region: [0.95, 0.90, 1.00, 1.15]}
+  qsr:              {age: [1.25, 1.05, 0.80], income: [1.25, 1.00, 0.75], region: [0.85, 1.05, 1.10, 0.95]}
+  pizza:            {age: [1.30, 1.10, 0.70], income: [1.10, 1.05, 0.85], region: [1.00, 1.05, 1.00, 0.95]}
+  casual_dining:    {age: [0.85, 1.15, 1.00], income: [0.80, 1.10, 1.10], region: [0.85, 1.05, 1.20, 0.85]}
+  big_box_value:    {age: [0.95, 1.05, 1.00], income: [1.30, 1.00, 0.70], region: [0.80, 1.05, 1.20, 0.85]}
+  big_box_upscale:  {age: [1.15, 1.10, 0.80], income: [0.80, 1.05, 1.15], region: [0.90, 1.15, 0.95, 1.05]}
+  club:             {age: [0.80, 1.15, 1.05], income: [0.60, 1.00, 1.40], region: [0.90, 0.85, 0.90, 1.35]}
+  home_improvement: {age: [0.75, 1.20, 1.05], income: [0.75, 1.05, 1.20], region: [0.95, 1.00, 1.05, 0.95]}
+  dollar:           {age: [0.95, 1.00, 1.05], income: [1.60, 0.90, 0.45], region: [0.60, 1.10, 1.45, 0.55]}
+  off_price:        {age: [1.10, 1.10, 0.85], income: [0.90, 1.05, 1.05], region: [1.20, 0.95, 0.95, 0.95]}
+  beauty:           {age: [1.45, 1.05, 0.60], income: [0.85, 1.05, 1.10], region: [1.00, 1.00, 1.00, 1.00]}
+  electronics:      {age: [1.15, 1.10, 0.80], income: [0.80, 1.00, 1.20], region: [1.00, 1.00, 1.00, 1.00]}
+  streaming:        {age: [1.30, 1.10, 0.70], income: [0.85, 1.00, 1.15], region: [1.00, 1.00, 1.00, 1.00]}
+  pet_ecommerce:    {age: [1.30, 1.10, 0.70], income: [0.80, 1.05, 1.15], region: [1.00, 1.00, 1.00, 1.00]}
+  ecommerce:        {age: [1.20, 1.10, 0.75], income: [0.85, 1.00, 1.15], region: [1.00, 0.95, 0.95, 1.10]}
+  rideshare:        {age: [1.80, 0.95, 0.40], income: [0.70, 1.00, 1.30], region: [1.25, 0.80, 0.90, 1.20]}
+  delivery:         {age: [1.80, 1.00, 0.40], income: [0.85, 1.05, 1.10], region: [1.00, 0.95, 1.00, 1.05]}
+  local:            {age: [1.00, 1.00, 1.00], income: [1.00, 1.00, 1.00], region: [1.00, 1.00, 1.00, 1.00]}
+
+# Card-visible spend = revenue * ratio(t); ratio drifts by `drift` per year plus a persistent AR(1) wobble
+# (`wobble` = stdev of the quarterly innovation). This is the part of revenue a card panel cannot see.
+tickers:
+  SBUX: {ratio: 0.70, drift: -0.005, wobble: 0.012, ticket: 7.5,  sigma: 0.45, profile: coffee,           dow: coffee,     mix: {STARBUCKS: 1.0}}
+  CMG:  {ratio: 0.95, drift: 0.000,  wobble: 0.008, ticket: 14.0, sigma: 0.40, profile: fast_casual,      dow: restaurant, mix: {CHIPOTLE: 1.0}}
+  MCD:  {ratio: 1.60, drift: -0.010, wobble: 0.012, ticket: 11.0, sigma: 0.50, profile: qsr,              dow: restaurant, mix: {MCDONALDS: 1.0}}
+  YUM:  {ratio: 1.20, drift: 0.000,  wobble: 0.015, ticket: 13.0, sigma: 0.50, profile: qsr,              dow: restaurant,
+         mix: {TACO BELL: 0.55, KFC: 0.20, PIZZA HUT: 0.20, THE HABIT: 0.05}}
+  DPZ:  {ratio: 2.10, drift: 0.000,  wobble: 0.012, ticket: 27.0, sigma: 0.40, profile: pizza,            dow: pizza,      mix: {DOMINOS: 1.0}}
+  DRI:  {ratio: 0.97, drift: 0.000,  wobble: 0.008, ticket: 62.0, sigma: 0.55, profile: casual_dining,    dow: dinner,
+         mix: {OLIVE GARDEN: 0.46, LONGHORN STEAKHOUSE: 0.28, CHEDDARS: 0.10, YARD HOUSE: 0.08, RUTHS CHRIS: 0.045, CHUYS: 0.04}}
+  WMT:  {ratio: 0.60, drift: 0.000,  wobble: 0.008, ticket: 52.0, sigma: 0.75, profile: big_box_value,    dow: retail,     mix: {WALMART: 0.85, SAMS CLUB: 0.15}}
+  TGT:  {ratio: 0.95, drift: 0.000,  wobble: 0.008, ticket: 47.0, sigma: 0.70, profile: big_box_upscale,  dow: retail,     mix: {TARGET: 1.0}}
+  COST: {ratio: 0.72, drift: 0.000,  wobble: 0.008, ticket: 118.0, sigma: 0.70, profile: club,            dow: retail,     mix: {COSTCO: 1.0}}
+  HD:   {ratio: 0.82, drift: -0.005, wobble: 0.012, ticket: 86.0, sigma: 0.85, profile: home_improvement, dow: weekend,    mix: {HOME DEPOT: 1.0}}
+  LOW:  {ratio: 0.92, drift: 0.000,  wobble: 0.012, ticket: 80.0, sigma: 0.85, profile: home_improvement, dow: weekend,    mix: {LOWES: 1.0}}
+  DG:   {ratio: 0.98, drift: 0.000,  wobble: 0.008, ticket: 17.0, sigma: 0.60, profile: dollar,           dow: retail,     mix: {DOLLAR GENERAL: 1.0}}
+  TJX:  {ratio: 0.62, drift: 0.000,  wobble: 0.012, ticket: 46.0, sigma: 0.65, profile: off_price,        dow: weekend,
+         mix: {TJ MAXX: 0.50, MARSHALLS: 0.30, HOMEGOODS: 0.17, SIERRA: 0.03}}
+  ULTA: {ratio: 0.97, drift: 0.000,  wobble: 0.008, ticket: 42.0, sigma: 0.60, profile: beauty,           dow: weekend,    mix: {ULTA BEAUTY: 1.0}}
+  BBY:  {ratio: 0.88, drift: 0.000,  wobble: 0.012, ticket: 135.0, sigma: 0.95, profile: electronics,     dow: weekend,    mix: {BEST BUY: 1.0}}
+  NFLX: {ratio: 0.45, drift: -0.035, wobble: 0.008, ticket: 15.5, sigma: 0.25, profile: streaming,        dow: flat,       mix: {NETFLIX: 1.0}}
+  CHWY: {ratio: 0.97, drift: 0.000,  wobble: 0.008, ticket: 68.0, sigma: 0.60, profile: pet_ecommerce,    dow: flat,       mix: {CHEWY: 1.0}}
+  UBER: {ratio: 1.50, drift: -0.040, wobble: 0.015, ticket: 24.0, sigma: 0.65, profile: rideshare,        dow: nightlife,  mix: {UBER: 1.0}}
+  DASH: {ratio: 4.50, drift: -0.030, wobble: 0.015, ticket: 36.0, sigma: 0.50, profile: delivery,         dow: dinner,     mix: {DOORDASH: 1.0}}
+  AMZN: {ratio: 0.55, drift: -0.030, wobble: 0.012, ticket: 39.0, sigma: 0.95, profile: ecommerce,        dow: flat,       mix: {AMAZON: 0.90, WHOLE FOODS: 0.10}}
+
+# Day-of-week multipliers, Monday..Sunday (renormalized within each fiscal quarter, so totals still tie out).
+dow_profiles:
+  coffee:     [1.06, 1.06, 1.06, 1.05, 1.03, 0.90, 0.84]
+  restaurant: [0.90, 0.92, 0.95, 0.98, 1.15, 1.12, 0.98]
+  pizza:      [0.85, 0.85, 0.88, 0.92, 1.25, 1.20, 1.05]
+  dinner:     [0.82, 0.85, 0.90, 0.95, 1.22, 1.25, 1.01]
+  retail:     [0.92, 0.90, 0.92, 0.95, 1.05, 1.20, 1.06]
+  weekend:    [0.85, 0.85, 0.88, 0.92, 1.05, 1.35, 1.10]
+  nightlife:  [0.85, 0.88, 0.92, 0.98, 1.20, 1.25, 0.92]
+  flat:       [1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00]
+
+# Brand descriptor templates. Placeholders: {store} {store5} {city} {st} {ref} {rest}. A source's `format`
+# wraps these (prefixes, case, truncation). `online` templates are used for card-not-present purchases.
+brands:
+  STARBUCKS:      {mcc: 5814, stores: 9000, online_share: 0.12,
+                   templates: ["STARBUCKS STORE {store5}", "STARBUCKS #{store} {city} {st}", "STARBUCKS {store} {city}"],
+                   online: ["STARBUCKS CARD RELOAD", "STARBUCKS APP {ref}"]}
+  CHIPOTLE:       {mcc: 5814, stores: 3600, online_share: 0.35,
+                   templates: ["CHIPOTLE {store}", "CHIPOTLE MEXICAN GRILL #{store}", "CHIPOTLE {store} {city} {st}"],
+                   online: ["CHIPOTLE ONLINE", "CHIPOTLE ONLINE {ref}"]}
+  MCDONALDS:      {mcc: 5814, stores: 13500, online_share: 0.05,
+                   templates: ["MCDONALD'S F{store}", "MCDONALDS #{store}", "MCDONALD'S M{store} {city}"],
+                   online: ["MCDONALDS APP {ref}"]}
+  TACO BELL:      {mcc: 5814, stores: 7200, online_share: 0.08,
+                   templates: ["TACO BELL #{store}", "TACO BELL {store} {city} {st}"], online: ["TACO BELL ONLINE {ref}"]}
+  KFC:            {mcc: 5814, stores: 3900, online_share: 0.05,
+                   templates: ["KFC #{store}", "KFC {store} {city}"], online: ["KFC ONLINE {ref}"]}
+  PIZZA HUT:      {mcc: 5814, stores: 6500, online_share: 0.45,
+                   templates: ["PIZZA HUT {store}", "PIZZA HUT #{store} {city} {st}"], online: ["PIZZAHUT.COM {ref}", "PIZZA HUT ONLINE"]}
+  THE HABIT:      {mcc: 5814, stores: 330, online_share: 0.10,
+                   templates: ["THE HABIT RESTAURANT #{store}", "HABIT BURGER GRILL {store}"], online: ["HABIT BURGER ONLINE"]}
+  DOMINOS:        {mcc: 5814, stores: 6800, online_share: 0.70,
+                   templates: ["DOMINO'S {store}", "DOMINOS PIZZA #{store}"], online: ["DOMINOS.COM {ref}", "DOMINO'S PIZZA ONLINE"]}
+  OLIVE GARDEN:   {mcc: 5812, stores: 920, online_share: 0.10,
+                   templates: ["OLIVE GARDEN {store}", "OLIVE GARDEN #{store} {city} {st}"], online: ["OLIVE GARDEN TOGO {ref}"]}
+  LONGHORN STEAKHOUSE: {mcc: 5812, stores: 580, online_share: 0.05,
+                   templates: ["LONGHORN STEAK {store}", "LONGHORN STEAKHOUSE #{store}"], online: ["LONGHORN TOGO {ref}"]}
+  CHEDDARS:       {mcc: 5812, stores: 180, online_share: 0.05,
+                   templates: ["CHEDDAR'S {store}", "CHEDDARS SCRATCH KITCHEN {store}"], online: ["CHEDDARS TOGO"]}
+  YARD HOUSE:     {mcc: 5813, stores: 90, online_share: 0.02, templates: ["YARD HOUSE {store} {city}", "YARDHOUSE #{store}"], online: ["YARD HOUSE ONLINE"]}
+  RUTHS CHRIS:    {mcc: 5812, stores: 150, online_share: 0.02,
+                   templates: ["RUTHS CHRIS {store}", "RUTH'S CHRIS STEAK HOUSE {city}"], online: ["RUTHS CHRIS ONLINE"]}
+  CHUYS:          {mcc: 5812, stores: 100, online_share: 0.05, templates: ["CHUY'S {store}", "CHUYS #{store} {city} {st}"], online: ["CHUYS TOGO"]}
+  WALMART:        {mcc: 5310, stores: 4600, online_share: 0.18,
+                   templates: ["WAL-MART #{store}", "WM SUPERCENTER #{store}", "WALMART {store} {city} {st}"],
+                   online: ["WALMART.COM {ref}", "WMT PLUS {ref}", "WALMART.COM 800-966-6546 AR"]}
+  SAMS CLUB:      {mcc: 5300, stores: 600, online_share: 0.12,
+                   templates: ["SAMS CLUB #{store}", "SAM'S CLUB {store} {city} {st}", "SAMSCLUB #{store} GAS"], online: ["SAMSCLUB.COM {ref}"]}
+  TARGET:         {mcc: 5310, stores: 1950, online_share: 0.20,
+                   templates: ["TARGET {store5}", "TARGET T-{store} {city} {st}", "TARGET #{store}"], online: ["TARGET.COM *{ref}", "TARGET.COM"]}
+  COSTCO:         {mcc: 5300, stores: 600, online_share: 0.08,
+                   templates: ["COSTCO WHSE #{store}", "COSTCO GAS #{store}", "COSTCO WHOLESALE {store} {city}"], online: ["COSTCO.COM *{ref}"]}
+  HOME DEPOT:     {mcc: 5200, stores: 2000, online_share: 0.15,
+                   templates: ["THE HOME DEPOT #{store}", "THE HOME DEPOT {store} {city} {st}", "HOME DEPOT {store}"], online: ["HOMEDEPOT.COM {ref}"]}
+  LOWES:          {mcc: 5200, stores: 1750, online_share: 0.12,
+                   templates: ["LOWES #{store}", "LOWE'S #{store} {city} {st}", "LOWES {store} {city}"], online: ["LOWES.COM {ref}"]}
+  DOLLAR GENERAL: {mcc: 5331, stores: 20000, online_share: 0.02,
+                   templates: ["DOLLAR GENERAL #{store}", "DOLLAR-GENERAL {store} {city} {st}", "DOLLAR GENERAL {store}"], online: ["DOLLARGENERAL.COM"]}
+  TJ MAXX:        {mcc: 5651, stores: 1300, online_share: 0.05, templates: ["TJ MAXX #{store}", "T.J. MAXX {store} {city} {st}"], online: ["TJMAXX.COM {ref}"]}
+  MARSHALLS:      {mcc: 5651, stores: 1200, online_share: 0.04, templates: ["MARSHALLS #{store}", "MARSHALLS {store} {city}"], online: ["MARSHALLS.COM"]}
+  HOMEGOODS:      {mcc: 5719, stores: 950, online_share: 0.02, templates: ["HOMEGOODS #{store}", "HOME GOODS {store} {city} {st}"], online: ["HOMEGOODS.COM"]}
+  SIERRA:         {mcc: 5941, stores: 90, online_share: 0.40, templates: ["SIERRA #{store}", "SIERRA {store} {city}"], online: ["SIERRA TRADING POST {ref}"]}
+  ULTA BEAUTY:    {mcc: 5977, stores: 1400, online_share: 0.20, templates: ["ULTA BEAUTY #{store}", "ULTA #{store} {city} {st}"], online: ["ULTA.COM {ref}"]}
+  BEST BUY:       {mcc: 5732, stores: 1000, online_share: 0.33,
+                   templates: ["BEST BUY {store5}", "BEST BUY #{store} {city} {st}", "BEST BUY MHT {store}"], online: ["BESTBUY.COM {ref}"]}
+  NETFLIX:        {mcc: 4899, stores: 1, online_share: 1.0, templates: ["NETFLIX.COM"],
+                   online: ["NETFLIX.COM", "NETFLIX.COM LOS GATOS CA", "NETFLIX INC", "PAYPAL *NETFLIX"]}
+  CHEWY:          {mcc: 5995, stores: 1, online_share: 1.0, templates: ["CHEWY.COM"],
+                   online: ["CHEWY.COM", "CHEWY.COM 800-672-4399 FL", "CHEWY INC {ref}"]}
+  UBER:           {mcc: 4121, stores: 1, online_share: 1.0, templates: ["UBER *TRIP"],
+                   online: ["UBER *TRIP {ref}", "UBER *TRIP HELP.UBER.COM", "UBER *EATS {ref}", "UBER *EATS PENDING"]}
+  DOORDASH:       {mcc: 5812, stores: 1, online_share: 1.0, templates: ["DOORDASH*{rest}"],
+                   online: ["DOORDASH*{rest}", "DD *DOORDASH {rest}", "DOORDASH DASHPASS"]}
+  AMAZON:         {mcc: 5942, stores: 1, online_share: 1.0, templates: ["AMAZON.COM*{ref}"],
+                   online: ["AMAZON.COM*{ref} AMZN.COM/BILL WA", "AMZN MKTP US*{ref}", "AMAZON MKTPL*{ref}", "AMAZON PRIME*{ref}",
+                            "PRIME VIDEO*{ref}", "AUDIBLE*{ref}", "KINDLE SVCS*{ref}"]}
+  WHOLE FOODS:    {mcc: 5411, stores: 530, online_share: 0.05, templates: ["WHOLEFDS {abbr} #{store}", "WHOLE FOODS MARKET #{store}"],
+                   online: ["AMAZON FRESH WHOLE FOODS {ref}"]}
+
+# Restaurant names that show up inside DoorDash descriptors (the merchant of record is still DoorDash).
+delivery_restaurants: [CHIPOTLE, "MCDONALD'S", TACO BELL, PANERA, WINGSTOP, "WENDY'S", SWEETGREEN, PANDA EXPRESS,
+                       SHAKE SHACK, FIVE GUYS, "JIMMY JOHN'S", "PAPA JOHN'S", THAI BASIL, SUSHI HOUSE, "MARIO'S PIZZA"]
+
+# Look-alike merchants that are NOT in the universe (label NONE). They exist to measure precision.
+distractors:
+  - {name: "TARGET RANGE & ARMORY", mcc: 7999, daily_per_capita: 0.004, ticket: 45}
+  - {name: "TARGET OPTICAL", mcc: 8043, daily_per_capita: 0.003, ticket: 160}
+  - {name: "OFFICE DEPOT", mcc: 5943, daily_per_capita: 0.020, ticket: 38}
+  - {name: "HOME DECOR DEPOT", mcc: 5719, daily_per_capita: 0.004, ticket: 70}
+  - {name: "LOWES FOODS", mcc: 5411, daily_per_capita: 0.020, ticket: 55}
+  - {name: "LOWE'S MARKET", mcc: 5411, daily_per_capita: 0.008, ticket: 40}
+  - {name: "DOLLAR TREE", mcc: 5331, daily_per_capita: 0.120, ticket: 14}
+  - {name: "FAMILY DOLLAR", mcc: 5331, daily_per_capita: 0.050, ticket: 15}
+  - {name: "ULTRA CLEAN CAR WASH", mcc: 7542, daily_per_capita: 0.006, ticket: 18}
+  - {name: "UBERCUTS SALON", mcc: 7230, daily_per_capita: 0.002, ticket: 35}
+  - {name: "DASH IN", mcc: 5499, daily_per_capita: 0.010, ticket: 12}
+  - {name: "AMAZONIA GRILL", mcc: 5812, daily_per_capita: 0.002, ticket: 30}
+  - {name: "MACDONALD FAMILY DENTAL", mcc: 8021, daily_per_capita: 0.002, ticket: 140}
+  - {name: "OLD MCDONALD FARM STAND", mcc: 5499, daily_per_capita: 0.002, ticket: 22}
+  - {name: "TACO BELLA CANTINA", mcc: 5812, daily_per_capita: 0.003, ticket: 28}
+  - {name: "DOMINO TAX SERVICE", mcc: 7276, daily_per_capita: 0.001, ticket: 180}
+  - {name: "STARBRIGHT COFFEE", mcc: 5814, daily_per_capita: 0.004, ticket: 6}
+  - {name: "SALSA CHIPOTLE GRILL", mcc: 5812, daily_per_capita: 0.003, ticket: 18}
+  - {name: "BEST BUY CARPETS", mcc: 5713, daily_per_capita: 0.002, ticket: 320}
+  - {name: "OLIVE GARDEN NURSERY", mcc: 5261, daily_per_capita: 0.002, ticket: 48}
+  - {name: "IC* COSTCO BY INSTACART", mcc: 5411, daily_per_capita: 0.030, ticket: 95}
+  - {name: "RED LOBSTER", mcc: 5812, daily_per_capita: 0.020, ticket: 58}
+  - {name: "PAYPAL *AMAZONSMILE GIFT", mcc: 5999, daily_per_capita: 0.001, ticket: 25}
+  - {name: "SHAKE SHACK", mcc: 5814, daily_per_capita: 0.012, ticket: 16}
+
+# Real chains outside the universe plus synthetic local businesses (label NONE).
+other_merchants:
+  # [name, mcc] - several share an MCC with a universe brand (LYFT/UBER, GRUBHUB/DOORDASH, PETSMART/CHEWY,
+  # BJ'S/COSTCO, MENARDS/HOME DEPOT, SEPHORA/ULTA, ROSS/TJX), so category codes alone cannot resolve them.
+  chains: [[DUNKIN, 5814], ["WENDY'S", 5814], [PANERA BREAD, 5814], [CHICK-FIL-A, 5814], [SUBWAY, 5814],
+           [BURGER KING, 5814], ["PAPA JOHN'S", 5814], [LITTLE CAESARS, 5814], [TEXAS ROADHOUSE, 5812],
+           [OUTBACK STEAKHOUSE, 5812], ["APPLEBEE'S", 5812], ["CHILI'S", 5812], [KROGER, 5411], [PUBLIX, 5411],
+           [SAFEWAY, 5411], [ALDI, 5411], ["TRADER JOE'S", 5411], [CVS/PHARMACY, 5912], [WALGREENS, 5912],
+           [SHELL OIL, 5541], [EXXONMOBIL, 5541], [7-ELEVEN, 5499], ["KOHL'S", 5311], ["MACY'S", 5311],
+           [NORDSTROM, 5311], [ROSS STORES, 5651], [BURLINGTON, 5651], [PETSMART, 5995], [PETCO, 5995],
+           [SEPHORA, 5977], ["BJ'S WHOLESALE", 5300], [MENARDS, 5200], [ACE HARDWARE, 5251], [GAMESTOP, 5734],
+           ["LYFT *RIDE", 4121], [GRUBHUB, 5812], [INSTACART, 5411], [SPOTIFY USA, 5815], [HULU, 4899],
+           [DISNEY PLUS, 4899], [APPLE.COM/BILL, 5818], ["GOOGLE *YOUTUBE", 5815], [ETSY.COM, 5999], [EBAY, 5999],
+           [WAYFAIR, 5712], [SHEIN.COM, 5651]]
+  chain_daily_per_capita: 0.060
+  local_count: 400
+  local_daily_per_capita: 0.080   # per "favorite" local business (each member has 8 in their region)
+  local_mcc: [5812, 5814, 5499, 5411, 7230, 5999, 5462, 5921, 7538, 5813]
+  processors: ["SQ *", "TST* ", "SP * ", "PAYPAL *", "CLV*", ""]
+
+# Ground-truth data problems injected on purpose (and logged to sim_truth.anomaly_log).
+anomalies:
+  outages:                      # source delivers nothing for these transaction dates
+    - {source: SRC_C, start: 2022-03-14, days: 3}
+    - {source: SRC_A, start: 2023-07-03, days: 2}
+    - {source: SRC_B, start: 2025-01-20, days: 4}
+    - {source: SRC_E, start: 2025-11-10, days: 2}
+  silent_departures:            # source stops sending data but the membership file still lists its members
+    - {source: SRC_D, start: 2024-09-15}
+  duplicate_deliveries:         # transactions in [start, start+days) are delivered a second time
+    - {source: SRC_B, start: 2021-11-26, days: 2}
+    - {source: SRC_D, start: 2023-02-14, days: 1}
+    - {source: SRC_A, start: 2025-06-02, days: 3}
+  unit_errors:                  # amounts delivered in cents instead of dollars
+    - {source: SRC_C, start: 2020-10-12, days: 5}
+    - {source: SRC_E, start: 2024-02-05, days: 7}
+  descriptor_changes:           # a processor change rewrites one brand's descriptors on one source
+    - {source: SRC_D, brand: CHIPOTLE, start: 2022-08-15, template: "CHPTL ONLINE ORD {store}"}
+    - {source: SRC_A, brand: TARGET, start: 2023-05-01, template: "TRGT STR {store}"}
+    - {source: SRC_C, brand: DOMINOS, start: 2025-03-01, template: "DPZ PIZZA {store}"}
+  malformed_rate: 0.0002        # rows with unparseable amounts / dates / empty descriptors
